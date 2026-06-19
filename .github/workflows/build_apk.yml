@@ -1,0 +1,63 @@
+name: Build Flutter APK from ZIP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Unzip Project Files
+        run: |
+          ZIP_FILE=$(find . -name "*.zip" | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Error: No ZIP file found in the repository root!"
+            exit 1
+          fi
+          echo "Found ZIP file: $ZIP_FILE"
+          
+          mkdir temp_unzip
+          unzip "$ZIP_FILE" -d temp_unzip
+          
+          PUBSPEC_PATH=$(find temp_unzip -name "pubspec.yaml" | head -n 1)
+          if [ -z "$PUBSPEC_PATH" ]; then
+            echo "Error: pubspec.yaml not found inside the ZIP!"
+            exit 1
+          fi
+          
+          PROJECT_ROOT=$(dirname "$PUBSPEC_PATH")
+          echo "Project root found at: $PROJECT_ROOT"
+          
+          cp -r "$PROJECT_ROOT"/* .
+          rm -rf temp_unzip
+          rm -f "$ZIP_FILE"
+          ls -la
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Build APK
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: power-wallet-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
