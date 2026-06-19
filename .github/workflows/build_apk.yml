@@ -13,11 +13,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Unzip Project Files
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Generate Standard Flutter Templates
+        run: |
+          flutter create --org com.example.powerwallet --project-name power_wallet .
+
+      - name: Unzip and Overwrite Custom Code
         run: |
           ZIP_FILE=$(find . -name "*.zip" | head -n 1)
           if [ -z "$ZIP_FILE" ]; then
-            echo "Error: No ZIP file found in the repository root!"
+            echo "Error: No ZIP file found!"
             exit 1
           fi
           echo "Found ZIP file: $ZIP_FILE"
@@ -32,24 +48,14 @@ jobs:
           fi
           
           PROJECT_ROOT=$(dirname "$PUBSPEC_PATH")
-          echo "Project root found at: $PROJECT_ROOT"
+          echo "Custom project root found at: $PROJECT_ROOT"
           
-          cp -r "$PROJECT_ROOT"/* .
+          cp -rf "$PROJECT_ROOT"/lib/* ./lib/
+          cp -f "$PROJECT_ROOT"/pubspec.yaml ./pubspec.yaml
+          
           rm -rf temp_unzip
           rm -f "$ZIP_FILE"
-          ls -la
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
+          ls -la lib/
 
       - name: Build APK
         run: |
